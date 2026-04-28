@@ -43,6 +43,28 @@ MODEL_FILES = {
 }
 
 
+def get_model_filename(model_name: str) -> str:
+    """Return the canonical filename for a supported model."""
+    if model_name not in MODEL_FILES:
+        raise KeyError(f"Unknown model name: {model_name}")
+    return MODEL_FILES[model_name]
+
+
+def resolve_model_path(model_name: str, models_folder: Optional[str] = None) -> str:
+    """
+    Resolve a model source for Ultralytics.
+
+    If a matching local checkpoint exists in `models_folder`, return its full path.
+    Otherwise return the canonical filename so Ultralytics can auto-download it.
+    """
+    filename = get_model_filename(model_name)
+    if models_folder:
+        full_path = os.path.join(models_folder, filename)
+        if os.path.isfile(full_path):
+            return full_path
+    return filename
+
+
 def get_available_devices() -> List[str]:
     """Get list of available compute devices."""
     devices = ["cpu"]

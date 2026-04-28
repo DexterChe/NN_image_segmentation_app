@@ -101,7 +101,10 @@ By default the app looks for models in:
 - ./Models
 - ../Models if the local Models folder does not exist
 
-The repository does not ship pretrained weights. After cloning the repo, download the required model files from the official model sources, typically the Ultralytics documentation or release assets for SAM, MobileSAM, FastSAM, and YOLOv8 segmentation models, and place them into the local Models directory.
+The repository does not ship pretrained weights. After cloning the repo, you now have two supported workflows:
+
+- local folder mode: download the required checkpoints yourself and place them into the local Models directory
+- auto-download mode: select an official model in the sidebar and let Ultralytics download the checkpoint automatically when you load it
 
 Create the folder if needed:
 
@@ -125,6 +128,8 @@ Supported filenames:
 | YOLOv8 Medium Seg | yolov8m-seg.pt |
 | YOLOv8 Extra Seg | yolov8x-seg.pt |
 
+If you prefer local checkpoints, download them from the official model sources, typically the Ultralytics documentation or release assets for SAM, MobileSAM, FastSAM, and YOLOv8 segmentation models, then keep the canonical filenames above so detection works automatically.
+
 ### 5. Launch the app
 
 ```bash
@@ -137,14 +142,15 @@ streamlit run app.py
 
 In the sidebar you set the global analysis parameters:
 
-- models folder
+- model source mode: local folder or official auto-download
+- models folder when local checkpoints are used
 - model type
 - compute device: CPU, CUDA, or Apple MPS
 - pixel size in nm per pixel
 - preprocessing options
 - result filtering metric and thresholds
 
-If you already have a valid Models folder, the app will detect available weights automatically.
+If you already have a valid Models folder, the app will detect available weights automatically. If you do not, you can switch to auto-download mode and let Ultralytics fetch the selected checkpoint.
 
 ### Step 2. Load images
 

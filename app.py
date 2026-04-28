@@ -45,7 +45,7 @@ from utils import (
 )
 from segmentation import (
     MODEL_TYPES, get_available_devices, find_models_in_folder,
-    load_model, run_inference, extract_particles
+    load_model, run_inference, extract_particles, resolve_model_path, get_model_filename
 )
 from analysis import analyze_particles
 from visualization import (
@@ -67,35 +67,58 @@ st.set_page_config(
 st.markdown("""
 <style>
     html, body, [class*="css"]  {
-        font-size: 18px;
+        font-size: 16px;
     }
     .block-container {
-        padding-top: 1.2rem;
+        padding-top: 1.35rem;
         padding-bottom: 2rem;
     }
-    /* Main header — inherits text color from theme */
+    .app-hero {
+        padding: 1.55rem 1.35rem 1.2rem 1.35rem;
+        border-radius: 24px;
+        background:
+            radial-gradient(circle at top right, rgba(249, 178, 51, 0.20), transparent 26%),
+            linear-gradient(135deg, rgba(12, 45, 72, 0.10) 0%, rgba(20, 93, 160, 0.05) 100%);
+        border: 1px solid rgba(120, 140, 160, 0.18);
+        margin-bottom: 1rem;
+        overflow: visible;
+    }
     .main-header {
-        font-size: 4rem;
-        line-height: 1.05;
+        font-size: 3rem;
+        line-height: 1.2;
         font-weight: 800;
-        margin-bottom: 0.4rem;
+        margin: 0 0 0.42rem 0;
+        padding: 0.08em 0 0.03em 0;
         letter-spacing: -0.04em;
+        display: block;
+        overflow: visible;
     }
     .sub-header {
-        font-size: 1.3rem;
+        font-size: 1.04rem;
         opacity: 0.82;
-        margin-bottom: 1.7rem;
-        max-width: 1100px;
+        margin: 0;
+        max-width: 980px;
     }
-    /* Tab styling */
+    .tutorial-image-frame {
+        max-width: 100%;
+        margin: 0 0 0.35rem 0;
+    }
+    .sidebar-shell {
+        padding: 0.95rem 1rem 0.35rem 1rem;
+        border-radius: 20px;
+        background: linear-gradient(180deg, rgba(12, 45, 72, 0.08) 0%, rgba(12, 45, 72, 0.02) 100%);
+        border: 1px solid rgba(120, 140, 160, 0.18);
+        margin-bottom: 0.9rem;
+    }
     .stTabs [data-baseweb="tab-list"] {
         gap: 10px;
     }
     .stTabs [data-baseweb="tab"] {
-        padding: 12px 22px;
-        border-radius: 12px 12px 0 0;
-        font-size: 1.05rem;
+        padding: 10px 18px;
+        border-radius: 14px 14px 0 0;
+        font-size: 0.98rem;
         font-weight: 600;
+        background: rgba(12, 45, 72, 0.04);
     }
     .stTabs [data-baseweb="tab-panel"] p,
     .stTabs [data-baseweb="tab-panel"] li,
@@ -104,13 +127,13 @@ st.markdown("""
     section[data-testid="stSidebar"] label,
     section[data-testid="stSidebar"] .stMarkdown,
     div[data-testid="stMetricValue"] {
-        font-size: 1.02rem;
+        font-size: 0.97rem;
     }
     h1, h2, h3 {
         letter-spacing: -0.02em;
     }
     h3 {
-        font-size: 1.55rem;
+        font-size: 1.38rem;
         margin-top: 0.4rem;
     }
     .tutorial-card {
@@ -129,12 +152,33 @@ st.markdown("""
         display: flex;
         align-items: center;
         gap: 12px;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.3rem;
     }
     .sidebar-logo-text {
-        font-size: 1.15rem;
+        font-size: 0.98rem;
         font-weight: 700;
         line-height: 1.1;
+    }
+    .sidebar-kicker {
+        font-size: 0.82rem;
+        opacity: 0.72;
+        margin-top: 0.18rem;
+    }
+    .empty-state {
+        padding: 1.4rem 1.35rem;
+        border-radius: 22px;
+        border: 1px dashed rgba(120, 140, 160, 0.34);
+        background: linear-gradient(180deg, rgba(20, 93, 160, 0.04), rgba(20, 93, 160, 0.015));
+        margin: 0.5rem 0 0.8rem 0;
+    }
+    .empty-state-title {
+        font-size: 1.12rem;
+        font-weight: 700;
+        margin-bottom: 0.28rem;
+    }
+    .empty-state-copy {
+        font-size: 0.95rem;
+        opacity: 0.84;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -385,6 +429,18 @@ def tutorial_image_path(filename: str) -> Optional[str]:
     return path if os.path.isfile(path) else None
 
 
+def render_empty_state(title: str, body: str) -> None:
+    st.markdown(
+        f"""
+        <div class="empty-state">
+            <div class="empty-state-title">{title}</div>
+            <div class="empty-state-copy">{body}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_tutorial_tab() -> None:
     st.markdown("### Quick Tutorial")
     st.markdown(
@@ -411,23 +467,26 @@ def render_tutorial_tab() -> None:
             """
             <div class="tutorial-card">
                 <div class="tutorial-step">2. Add model weights</div>
-                This repository intentionally does not include <b>.pt</b> weights. Put them into the local <b>Models</b> folder and keep the expected filenames so auto-detection works.
+                This repository intentionally does not include <b>.pt</b> weights. You can keep checkpoints in the local <b>Models</b> folder or let Ultralytics download the selected official checkpoint automatically.
             </div>
             """,
             unsafe_allow_html=True,
         )
     with model_col:
         st.info(
-            "Where to get models after downloading the repo:\n\n"
-            "- open the repository README section Add model weights\n"
-            "- download the needed weights from the official Ultralytics/model release pages\n"
-            "- place the downloaded .pt files into ./Models\n"
-            "- keep exact filenames like sam_b.pt, mobile_sam.pt, FastSAM-x.pt, yolov8s-seg.pt\n"
-            "- if your weights are elsewhere, use the sidebar Models folder field or Browse"
+            "Model setup after downloading the repository:\n\n"
+            "- easiest mode: choose a model in the sidebar and press Load model\n"
+            "- if the checkpoint is not found locally, Ultralytics can download the official file automatically\n"
+            "- manual mode: place .pt files into ./Models with canonical filenames\n"
+            "- external mode: point the sidebar to any folder that already contains your checkpoints"
         )
 
     if raw_img:
-        st.image(raw_img, caption="Step 1: raw microscopy image input", use_container_width=True)
+        image_col, _, _ = st.columns([1.15, 1.55, 1.55], gap="medium")
+        with image_col:
+            st.markdown("<div class='tutorial-image-frame'>", unsafe_allow_html=True)
+            st.image(raw_img, caption="Step 1: raw microscopy image input", use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
     col_left, col_right = st.columns(2, gap="large")
     with col_left:
@@ -516,20 +575,21 @@ init_session_state()
 # ─── Sidebar ─────────────────────────────────────────────────────────────────
 def render_sidebar():
     with st.sidebar:
+        st.markdown("<div class='sidebar-shell'>", unsafe_allow_html=True)
         if os.path.isfile(APP_LOGO_PATH):
             logo_col, text_col = st.columns([0.34, 0.66], gap="small")
             with logo_col:
-                st.image(APP_LOGO_PATH, width=88)
+                st.image(APP_LOGO_PATH, width=82)
             with text_col:
                 st.markdown(
-                    "<div class='sidebar-logo-text'>Particle Segmentation<br>Studio</div>",
+                    "<div class='sidebar-logo-text'>Segmentation Studio</div><div class='sidebar-kicker'>SEM/TEM particle workflow</div>",
                     unsafe_allow_html=True,
                 )
 
-        st.markdown("## ⚙️ Settings")
+        st.markdown("## Workspace Settings")
 
         # ── Model section ────────────────────────────────────────────────
-        st.markdown("### 🧠 Model")
+        st.markdown("### Model Setup")
 
         # Auto-detect models folder
         default_models_dir = get_default_models_dir()
@@ -537,44 +597,64 @@ def render_sidebar():
             st.session_state.models_dir_input = default_models_dir
         sync_pending_widget_value("models_dir_input", "models_dir_input_pending")
 
-        models_dir = st.text_input(
-            "Models folder",
-            value=st.session_state.models_dir_input,
-            key="models_dir_input",
-            help="Path to the folder containing .pt model files"
+        model_source_mode = st.radio(
+            "Model source",
+            options=["Use local folder", "Auto-download official model"],
+            horizontal=False,
+            help="Use local checkpoints from a folder or let Ultralytics fetch the selected official weight automatically.",
         )
-        cols_models = st.columns([1, 1])
-        with cols_models[0]:
-            browse_models = st.button("Browse...", key="browse_models")
-        with cols_models[1]:
-            st.write("")
-        if browse_models:
-            folder = select_folder_dialog()
-            if folder:
-                st.session_state.models_dir_input_pending = folder
-                st.rerun()
-            elif not folder_picker_is_supported():
-                st.warning("Folder picker is not available in this environment.")
 
-        available_models = find_models_in_folder(models_dir)
-        if available_models:
-            st.success(f"Models found: {len(available_models)}")
-            model_choice = st.selectbox(
-                "Select model",
-                options=list(available_models.keys()),
-                format_func=lambda x: f"{x} — {MODEL_TYPES[x]['description']}",
-                index=0
+        models_dir = st.session_state.models_dir_input
+        available_models = {}
+        if model_source_mode == "Use local folder":
+            models_dir = st.text_input(
+                "Models folder",
+                key="models_dir_input",
+                help="Path to a folder containing local .pt model files"
             )
+            cols_models = st.columns([1, 1])
+            with cols_models[0]:
+                browse_models = st.button("Browse...", key="browse_models")
+            with cols_models[1]:
+                st.write("")
+            if browse_models:
+                folder = select_folder_dialog()
+                if folder:
+                    st.session_state.models_dir_input_pending = folder
+                    st.rerun()
+                elif not folder_picker_is_supported():
+                    st.warning("Folder picker is not available in this environment.")
+
+            available_models = find_models_in_folder(models_dir)
+            if available_models:
+                st.success(f"Detected local models: {len(available_models)}")
+                model_choice = st.selectbox(
+                    "Model",
+                    options=list(available_models.keys()),
+                    format_func=lambda x: f"{x} — {MODEL_TYPES[x]['description']}",
+                    index=0
+                )
+            else:
+                st.warning("No matching local models found in the selected folder.")
+                model_choice = st.selectbox(
+                    "Model",
+                    options=list(MODEL_TYPES.keys()),
+                    format_func=lambda x: f"{x} — {MODEL_TYPES[x]['description']}"
+                )
+                st.caption("Tip: switch to auto-download mode if you want Ultralytics to fetch the checkpoint for you.")
         else:
-            st.warning("No models found in the specified folder")
             model_choice = st.selectbox(
-                "Select model",
+                "Official model",
                 options=list(MODEL_TYPES.keys()),
                 format_func=lambda x: f"{x} — {MODEL_TYPES[x]['description']}"
             )
-            model_path_manual = st.text_input("Path to .pt model", value="")
-            if model_path_manual:
-                available_models = {model_choice: model_path_manual}
+            resolved_path = resolve_model_path(model_choice, default_models_dir)
+            if os.path.isfile(resolved_path):
+                st.caption(f"Local checkpoint already available: {resolved_path}")
+            else:
+                st.caption(
+                    f"If {get_model_filename(model_choice)} is missing locally, Ultralytics will download it automatically during model load."
+                )
 
         # ── Device ───────────────────────────────────────────────────────
         devices = get_available_devices()
@@ -588,7 +668,7 @@ def render_sidebar():
         st.markdown("---")
 
         # ── Pixel size ───────────────────────────────────────────────────
-        st.markdown("### 📏 Pixel Size")
+        st.markdown("### Pixel Size")
         px_size = st.number_input(
             "Pixel size (nm/px)",
             min_value=0.001,
@@ -602,7 +682,7 @@ def render_sidebar():
         st.markdown("---")
 
         # ── Preprocessing ────────────────────────────────────────────────
-        st.markdown("### 🔧 Preprocessing")
+        st.markdown("### Preprocessing")
         use_clahe = st.checkbox("Apply CLAHE", value=False)
         clahe_clip = 2.0
         clahe_tile = 8
@@ -618,7 +698,7 @@ def render_sidebar():
         st.markdown("---")
 
         # ── Filter settings ──────────────────────────────────────────────
-        st.markdown("### 🔍 Result Filtering")
+        st.markdown("### Result Filtering")
         size_metric = st.selectbox(
             "Size metric",
             options=[
@@ -652,8 +732,11 @@ def render_sidebar():
             "Image Segmentation App v2.0<br>© Dmitry Chezganov</p>",
             unsafe_allow_html=True
         )
+        st.markdown("</div>", unsafe_allow_html=True)
 
     return {
+        "model_source_mode": model_source_mode,
+        "models_dir": models_dir,
         "model_choice": model_choice,
         "available_models": available_models,
         "device": device,
@@ -672,13 +755,12 @@ def render_sidebar():
 # ─── Main App ────────────────────────────────────────────────────────────────
 def main():
     # Header
-    st.markdown('<p class="main-header">Image Segmentation & Particle Analysis</p>',
-                unsafe_allow_html=True)
     st.markdown(
-        '<p class="sub-header">SEM/TEM image segmentation using SAM / FastSAM / YOLO '
-        'and particle size distribution analysis. Built for high-resolution particle workflows, '
-        'measurement export, and publication-ready review.</p>',
-        unsafe_allow_html=True
+        '<div class="app-hero">'
+        '<div class="main-header">Image Segmentation & Particle Analysis</div>'
+        '<div class="sub-header">Segment microscopy images, measure particles, inspect distributions, and export results from one consistent workspace.</div>'
+        '</div>',
+        unsafe_allow_html=True,
     )
 
     # Sidebar configuration
@@ -745,6 +827,11 @@ def main():
                     st.session_state.particles_per_image = []
                     st.session_state.measurements_per_image = []
                     st.success(f"Loaded {len(images)} images")
+            else:
+                render_empty_state(
+                    "No images loaded yet",
+                    "Upload one or more microscopy images here, or switch to folder mode for batch loading from disk."
+                )
 
         else:  # Folder path
             if "images_folder_input" not in st.session_state:
@@ -753,7 +840,6 @@ def main():
 
             folder_path = st.text_input(
                 "Path to image folder",
-                value=st.session_state.images_folder_input,
                 key="images_folder_input",
                 placeholder="/path/to/images/"
             )
@@ -797,6 +883,11 @@ def main():
                     st.session_state.particles_per_image = []
                     st.session_state.measurements_per_image = []
                     st.success(f"Loaded {len(images)} images from folder")
+            elif not folder_path:
+                render_empty_state(
+                    "Select a source folder",
+                    "Use Browse or paste a folder path that contains TIFF, PNG, JPG, or BMP microscopy images."
+                )
 
         # Preview loaded images
         if st.session_state.images_loaded and st.session_state.images:
@@ -823,10 +914,13 @@ def main():
     # TAB 2: Preprocessing
     # ════════════════════════════════════════════════════════════════════
     with tab_preprocess:
-        st.markdown("### Image Preprocessing")
+        st.markdown("### Preprocess Images")
 
         if not st.session_state.images_loaded:
-            st.info("⬅️ First load images in the **Load** tab")
+            render_empty_state(
+                "Preprocessing is waiting for images",
+                "Start in the Load tab, then return here to apply CLAHE and rebinning before segmentation."
+            )
         else:
             st.markdown(f"""
             | Parameter | Value |
@@ -898,7 +992,10 @@ def main():
         st.markdown("### Segmentation")
 
         if not st.session_state.images_loaded:
-            st.info("⬅️ First load images in the **Load** tab")
+            render_empty_state(
+                "Segmentation is waiting for input",
+                "Load images first, then choose a model source and device before running inference."
+            )
         else:
             # Model info
             col_model, col_device, col_images = st.columns(3)
@@ -914,17 +1011,25 @@ def main():
             # Load model button
             model_name = cfg['model_choice']
             if st.button("📦 Load model", type="secondary"):
-                if model_name in cfg['available_models']:
-                    model_path = cfg['available_models'][model_name]
+                model_path = None
+                if cfg["model_source_mode"] == "Use local folder":
+                    model_path = cfg['available_models'].get(model_name)
+                    if not model_path:
+                        st.error("The selected model is not available in the chosen local folder.")
+                else:
+                    model_path = resolve_model_path(model_name, cfg["models_dir"])
+
+                if model_path:
                     with st.spinner(f"Loading model {model_name}..."):
                         model = load_model(model_name, model_path)
                         st.session_state.model = model
                         st.session_state.model_loaded = True
                         st.session_state.current_model_name = model_name
                         st.session_state.model_device = cfg["device"]
-                    st.success(f"Model {model_name} loaded!")
-                else:
-                    st.error("Model not found. Specify the model path in the sidebar.")
+                    if os.path.isfile(model_path):
+                        st.success(f"Model {model_name} loaded from local storage.")
+                    else:
+                        st.success(f"Model {model_name} loaded. If needed, Ultralytics downloaded the checkpoint automatically.")
 
             # Run segmentation
             if st.session_state.model_loaded:
@@ -1032,7 +1137,10 @@ def main():
         st.markdown("### Segmentation Results")
 
         if not st.session_state.segmentation_done:
-            st.info("⬅️ First run segmentation in the **Segmentation** tab")
+            render_empty_state(
+                "No segmentation results yet",
+                "Load a model and run segmentation to inspect overlays, particle crops, and per-image measurements here."
+            )
         else:
             images = st.session_state.images_processed
             particles_list = st.session_state.particles_per_image
@@ -1099,7 +1207,10 @@ def main():
         st.markdown("### Particle Property Distributions")
 
         if not st.session_state.segmentation_done:
-            st.info("⬅️ First run segmentation in the **Segmentation** tab")
+            render_empty_state(
+                "No distributions available yet",
+                "Run segmentation first. This tab will then show publication-ready histograms and summary statistics."
+            )
         else:
             measurements_list = st.session_state.measurements_per_image
             names = st.session_state.image_names
@@ -1230,7 +1341,10 @@ def main():
         st.markdown("### Export Results")
 
         if not st.session_state.segmentation_done:
-            st.info("⬅️ First run segmentation in the **Segmentation** tab")
+            render_empty_state(
+                "Nothing to export yet",
+                "After segmentation finishes, this tab will let you download CSV files, figures, ZIP archives, and a complete local result package."
+            )
         else:
             measurements_list = st.session_state.measurements_per_image
             names = st.session_state.image_names
