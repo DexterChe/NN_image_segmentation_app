@@ -119,6 +119,18 @@ def select_folder_dialog() -> Optional[str]:
     return folder if folder else None
 
 
+def get_default_models_dir() -> str:
+    repo_dir = os.path.dirname(__file__)
+    candidate_dirs = [
+        os.path.join(repo_dir, "Models"),
+        os.path.join(os.path.dirname(repo_dir), "Models"),
+    ]
+    for candidate in candidate_dirs:
+        if os.path.isdir(candidate):
+            return candidate
+    return candidate_dirs[0]
+
+
 def save_results_to_dir(save_dir: str, images, particles_list,
                         measurements_list, names, model_name: str,
                         original_images=None,
@@ -289,9 +301,7 @@ def render_sidebar():
         st.markdown("### 🧠 Model")
 
         # Auto-detect models folder
-        default_models_dir = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "Models"
-        )
+        default_models_dir = get_default_models_dir()
         if "models_dir_input" not in st.session_state:
             st.session_state.models_dir_input = default_models_dir
 
