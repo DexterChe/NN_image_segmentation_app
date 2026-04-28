@@ -34,6 +34,11 @@ except Exception:
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(__file__))
 
+APP_DIR = os.path.dirname(__file__)
+DOCS_IMAGE_DIR = os.path.join(APP_DIR, "docs", "images")
+TUTORIAL_IMAGE_DIR = os.path.join(DOCS_IMAGE_DIR, "tutorial")
+APP_LOGO_PATH = os.path.join(DOCS_IMAGE_DIR, "app_logo.svg")
+
 from utils import (
     load_image, load_image_from_bytes, apply_clahe, rebinning,
     get_image_files
@@ -61,24 +66,75 @@ st.set_page_config(
 # ─── Custom CSS ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
+    html, body, [class*="css"]  {
+        font-size: 18px;
+    }
+    .block-container {
+        padding-top: 1.2rem;
+        padding-bottom: 2rem;
+    }
     /* Main header — inherits text color from theme */
     .main-header {
-        font-size: 2.6rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
+        font-size: 4rem;
+        line-height: 1.05;
+        font-weight: 800;
+        margin-bottom: 0.4rem;
+        letter-spacing: -0.04em;
     }
     .sub-header {
-        font-size: 1rem;
-        opacity: 0.7;
-        margin-bottom: 1.5rem;
+        font-size: 1.3rem;
+        opacity: 0.82;
+        margin-bottom: 1.7rem;
+        max-width: 1100px;
     }
     /* Tab styling */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
+        gap: 10px;
     }
     .stTabs [data-baseweb="tab"] {
-        padding: 8px 20px;
-        border-radius: 8px 8px 0 0;
+        padding: 12px 22px;
+        border-radius: 12px 12px 0 0;
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+    .stTabs [data-baseweb="tab-panel"] p,
+    .stTabs [data-baseweb="tab-panel"] li,
+    .stTabs [data-baseweb="tab-panel"] label,
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] .stMarkdown,
+    div[data-testid="stMetricValue"] {
+        font-size: 1.02rem;
+    }
+    h1, h2, h3 {
+        letter-spacing: -0.02em;
+    }
+    h3 {
+        font-size: 1.55rem;
+        margin-top: 0.4rem;
+    }
+    .tutorial-card {
+        padding: 1.1rem 1.2rem;
+        border: 1px solid rgba(120, 140, 160, 0.22);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(18, 39, 56, 0.05) 0%, rgba(18, 39, 56, 0.015) 100%);
+        margin-bottom: 1rem;
+    }
+    .tutorial-step {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 0.35rem;
+    }
+    .sidebar-logo-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 0.75rem;
+    }
+    .sidebar-logo-text {
+        font-size: 1.15rem;
+        font-weight: 700;
+        line-height: 1.1;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -324,12 +380,152 @@ def save_results_to_dir(save_dir: str, images, particles_list,
         plt.close(fig)
 
 
+def tutorial_image_path(filename: str) -> Optional[str]:
+    path = os.path.join(TUTORIAL_IMAGE_DIR, filename)
+    return path if os.path.isfile(path) else None
+
+
+def render_tutorial_tab() -> None:
+    st.markdown("### Quick Tutorial")
+    st.markdown(
+        "Use this tab as the built-in onboarding guide. It mirrors the repository tutorial "
+        "and explains the full workflow from model setup to export."
+    )
+
+    raw_img = tutorial_image_path("step-1-raw-input.png")
+    overlay_img = tutorial_image_path("step-4-mask-overlay.png")
+    dist_img = tutorial_image_path("step-5-distributions.png")
+
+    intro_col, model_col = st.columns([1.25, 1.0], gap="large")
+    with intro_col:
+        st.markdown(
+            """
+            <div class="tutorial-card">
+                <div class="tutorial-step">1. Install and launch</div>
+                Clone the repository, create a Python environment, install dependencies, and run the app with <b>streamlit run app.py</b>.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            """
+            <div class="tutorial-card">
+                <div class="tutorial-step">2. Add model weights</div>
+                This repository intentionally does not include <b>.pt</b> weights. Put them into the local <b>Models</b> folder and keep the expected filenames so auto-detection works.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with model_col:
+        st.info(
+            "Where to get models after downloading the repo:\n\n"
+            "- open the repository README section Add model weights\n"
+            "- download the needed weights from the official Ultralytics/model release pages\n"
+            "- place the downloaded .pt files into ./Models\n"
+            "- keep exact filenames like sam_b.pt, mobile_sam.pt, FastSAM-x.pt, yolov8s-seg.pt\n"
+            "- if your weights are elsewhere, use the sidebar Models folder field or Browse"
+        )
+
+    if raw_img:
+        st.image(raw_img, caption="Step 1: raw microscopy image input", use_container_width=True)
+
+    col_left, col_right = st.columns(2, gap="large")
+    with col_left:
+        st.markdown(
+            """
+            <div class="tutorial-card">
+                <div class="tutorial-step">3. Load images</div>
+                In the Load tab, either upload files directly or point the app to a folder with TIFF, PNG, JPG, or BMP images.
+            </div>
+            <div class="tutorial-card">
+                <div class="tutorial-step">4. Preprocess if needed</div>
+                Use CLAHE for local contrast enhancement and rebinning for faster or lower-resolution segmentation runs.
+            </div>
+            <div class="tutorial-card">
+                <div class="tutorial-step">5. Run segmentation</div>
+                Load a model in the Segmentation tab, choose CPU, CUDA, or Apple MPS, and run inference on the processed images.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with col_right:
+        st.markdown(
+            """
+            <div class="tutorial-card">
+                <div class="tutorial-step">6. Inspect results</div>
+                Review the native-resolution overlay, particle crops, and the full measurements table before exporting data.
+            </div>
+            <div class="tutorial-card">
+                <div class="tutorial-step">7. Explore distributions</div>
+                The Distributions tab shows particle size statistics such as equivalent diameter, area, and Feret diameters.
+            </div>
+            <div class="tutorial-card">
+                <div class="tutorial-step">8. Export everything</div>
+                Download CSV files, a ZIP archive, or save the full local result package with masks, crops, metadata, and figures.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    if overlay_img or dist_img:
+        img_col1, img_col2 = st.columns(2, gap="large")
+        with img_col1:
+            if overlay_img:
+                st.image(overlay_img, caption="Step 6: segmentation mask overlay", use_container_width=True)
+        with img_col2:
+            if dist_img:
+                st.image(dist_img, caption="Step 7: particle property distributions", use_container_width=True)
+
+    st.markdown("### Supported Model Filenames")
+    model_table = pd.DataFrame(
+        {
+            "Model": [
+                "SAM Base",
+                "SAM Large",
+                "SAM2 Large",
+                "SAM2.1 Large",
+                "MobileSAM",
+                "FastSAM X",
+                "FastSAM S",
+                "YOLOv8 Nano Seg",
+                "YOLOv8 Small Seg",
+                "YOLOv8 Medium Seg",
+                "YOLOv8 Extra Seg",
+            ],
+            "Filename": [
+                "sam_b.pt",
+                "sam_l.pt",
+                "sam2_l.pt",
+                "sam2.1_l.pt",
+                "mobile_sam.pt",
+                "FastSAM-x.pt",
+                "FastSAM-s.pt",
+                "yolov8n-seg.pt",
+                "yolov8s-seg.pt",
+                "yolov8m-seg.pt",
+                "yolov8x-seg.pt",
+            ],
+        }
+    )
+    st.dataframe(model_table, use_container_width=True, hide_index=True)
+
+
 init_session_state()
 
 
 # ─── Sidebar ─────────────────────────────────────────────────────────────────
 def render_sidebar():
     with st.sidebar:
+        if os.path.isfile(APP_LOGO_PATH):
+            logo_col, text_col = st.columns([0.34, 0.66], gap="small")
+            with logo_col:
+                st.image(APP_LOGO_PATH, width=88)
+            with text_col:
+                st.markdown(
+                    "<div class='sidebar-logo-text'>Particle Segmentation<br>Studio</div>",
+                    unsafe_allow_html=True,
+                )
+
         st.markdown("## ⚙️ Settings")
 
         # ── Model section ────────────────────────────────────────────────
@@ -476,11 +672,12 @@ def render_sidebar():
 # ─── Main App ────────────────────────────────────────────────────────────────
 def main():
     # Header
-    st.markdown('<p class="main-header">🔬 Image Segmentation & Particle Analysis</p>',
+    st.markdown('<p class="main-header">Image Segmentation & Particle Analysis</p>',
                 unsafe_allow_html=True)
     st.markdown(
         '<p class="sub-header">SEM/TEM image segmentation using SAM / FastSAM / YOLO '
-        'and particle size distribution analysis</p>',
+        'and particle size distribution analysis. Built for high-resolution particle workflows, '
+        'measurement export, and publication-ready review.</p>',
         unsafe_allow_html=True
     )
 
@@ -495,10 +692,13 @@ def main():
         st.session_state.model_device = None
 
     # ── Tabs ─────────────────────────────────────────────────────────────
-    tab_load, tab_preprocess, tab_segment, tab_results, tab_distrib, tab_export = st.tabs([
-        "📁 Load", "🔧 Preprocess", "🔬 Segmentation",
+    tab_tutorial, tab_load, tab_preprocess, tab_segment, tab_results, tab_distrib, tab_export = st.tabs([
+        "📘 Tutorial", "📁 Load", "🔧 Preprocess", "🔬 Segmentation",
         "📊 Results", "📈 Distributions", "💾 Export"
     ])
+
+    with tab_tutorial:
+        render_tutorial_tab()
 
     # ════════════════════════════════════════════════════════════════════
     # TAB 1: Loading images

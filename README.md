@@ -101,6 +101,8 @@ By default the app looks for models in:
 - ./Models
 - ../Models if the local Models folder does not exist
 
+The repository does not ship pretrained weights. After cloning the repo, download the required model files from the official model sources, typically the Ultralytics documentation or release assets for SAM, MobileSAM, FastSAM, and YOLOv8 segmentation models, and place them into the local Models directory.
+
 Create the folder if needed:
 
 ```bash
