@@ -1,0 +1,44 @@
+.local/
+
+# Secrets and local config
+.env
+.env.*
+*.env
+secrets.*
+.streamlit/secrets.toml
+
+# Python cache and virtualenvs
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Notebook and editor state
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+
+# Model weights and checkpoints
+*.pt
+*.pth
+*.ckpt
+
+# Generated outputs and local data
+segmentation_results/
+data/
+raw_data/
+outputs/
+tmp/
+temp/
+
+# Office and packaged artifacts
+*.zip
+*.xlsx
+*.xls
+*.doc
+*.docx
+*.pdf
