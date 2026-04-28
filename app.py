@@ -103,6 +103,8 @@ def init_session_state():
         "current_model_name": None,
         "model_device": None,
         "processing_time": 0.0,
+        "models_dir_input_pending": None,
+        "images_folder_input_pending": None,
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -155,6 +157,13 @@ def get_default_models_dir() -> str:
         if os.path.isdir(candidate):
             return candidate
     return candidate_dirs[0]
+
+
+def sync_pending_widget_value(widget_key: str, pending_key: str) -> None:
+    pending_value = st.session_state.get(pending_key)
+    if pending_value is not None:
+        st.session_state[widget_key] = pending_value
+        st.session_state[pending_key] = None
 
 
 def save_results_to_dir(save_dir: str, images, particles_list,
@@ -330,6 +339,7 @@ def render_sidebar():
         default_models_dir = get_default_models_dir()
         if "models_dir_input" not in st.session_state:
             st.session_state.models_dir_input = default_models_dir
+        sync_pending_widget_value("models_dir_input", "models_dir_input_pending")
 
         models_dir = st.text_input(
             "Models folder",
@@ -345,8 +355,8 @@ def render_sidebar():
         if browse_models:
             folder = select_folder_dialog()
             if folder:
-                st.session_state.models_dir_input = folder
-                models_dir = folder
+                st.session_state.models_dir_input_pending = folder
+                st.rerun()
             elif not folder_picker_is_supported():
                 st.warning("Folder picker is not available in this environment.")
 
@@ -539,6 +549,7 @@ def main():
         else:  # Folder path
             if "images_folder_input" not in st.session_state:
                 st.session_state.images_folder_input = ""
+            sync_pending_widget_value("images_folder_input", "images_folder_input_pending")
 
             folder_path = st.text_input(
                 "Path to image folder",
@@ -554,8 +565,8 @@ def main():
             if browse_images:
                 folder = select_folder_dialog()
                 if folder:
-                    st.session_state.images_folder_input = folder
-                    folder_path = folder
+                    st.session_state.images_folder_input_pending = folder
+                    st.rerun()
                 elif not folder_picker_is_supported():
                     st.warning("Folder picker is not available in this environment.")
             if folder_path and st.button("✅ Load from folder", type="primary"):
