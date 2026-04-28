@@ -19,6 +19,7 @@ import tempfile
 import zipfile
 import io
 import shutil
+import subprocess
 import matplotlib.pyplot as plt
 import cv2
 from typing import Optional
@@ -109,14 +110,39 @@ def init_session_state():
 
 
 def select_folder_dialog() -> Optional[str]:
-    if not TK_AVAILABLE:
+    try:
+        if sys.platform == "darwin":
+            result = subprocess.run(
+                [
+                    "osascript",
+                    "-e", "try",
+                    "-e", 'POSIX path of (choose folder with prompt "Select a folder")',
+                    "-e", "on error number -128",
+                    "-e", 'return ""',
+                    "-e", "end try",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            folder = result.stdout.strip()
+            return os.path.normpath(folder) if folder else None
+
+        if not TK_AVAILABLE:
+            return None
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        folder = filedialog.askdirectory()
+        root.destroy()
+        return os.path.normpath(folder) if folder else None
+    except Exception:
         return None
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    folder = filedialog.askdirectory()
-    root.destroy()
-    return folder if folder else None
+
+
+def folder_picker_is_supported() -> bool:
+    return sys.platform == "darwin" or TK_AVAILABLE
 
 
 def get_default_models_dir() -> str:
@@ -321,7 +347,7 @@ def render_sidebar():
             if folder:
                 st.session_state.models_dir_input = folder
                 models_dir = folder
-            elif not TK_AVAILABLE:
+            elif not folder_picker_is_supported():
                 st.warning("Folder picker is not available in this environment.")
 
         available_models = find_models_in_folder(models_dir)
@@ -530,7 +556,7 @@ def main():
                 if folder:
                     st.session_state.images_folder_input = folder
                     folder_path = folder
-                elif not TK_AVAILABLE:
+                elif not folder_picker_is_supported():
                     st.warning("Folder picker is not available in this environment.")
             if folder_path and st.button("✅ Load from folder", type="primary"):
                 files = get_image_files(folder_path)

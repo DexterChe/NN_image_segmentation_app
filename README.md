@@ -1,5 +1,8 @@
 # Image Segmentation and Particle Analysis
 
+[![CI](https://github.com/DexterChe/NN_image_segmentation_app/actions/workflows/ci.yml/badge.svg)](https://github.com/DexterChe/NN_image_segmentation_app/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 Standalone Streamlit application for SEM and TEM image segmentation, particle measurement, and particle size distribution analysis.
 
 This repository is prepared as a standalone app repository. Source code and documentation are tracked. Local data, generated outputs, and model weights are intentionally excluded from git.
