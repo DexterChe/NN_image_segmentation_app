@@ -729,7 +729,11 @@ def render_sidebar():
         st.markdown("---")
         st.markdown(
             "<p style='text-align:center; color:#9CA3AF; font-size:0.8rem;'>"
-            "Image Segmentation App v2.0<br>© Dmitry Chezganov</p>",
+            "Image Segmentation App v2.0<br>"
+            "Copyright 2026 Dmitry Chezganov<br>"
+            "Licensed under AGPL-3.0-only<br>"
+            "<a href='https://github.com/DexterChe/NN_image_segmentation_app' target='_blank'>Source code</a>"
+            "</p>",
             unsafe_allow_html=True
         )
         st.markdown("</div>", unsafe_allow_html=True)

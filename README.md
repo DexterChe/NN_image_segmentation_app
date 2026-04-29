@@ -1,7 +1,7 @@
 # Image Segmentation and Particle Analysis
 
 [![CI](https://github.com/DexterChe/NN_image_segmentation_app/actions/workflows/ci.yml/badge.svg)](https://github.com/DexterChe/NN_image_segmentation_app/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
 
 Standalone Streamlit application for SEM and TEM image segmentation, particle measurement, and particle size distribution analysis.
 
@@ -49,8 +49,12 @@ streamlit_app/
 ├── docs/
 │   ├── images/
 │   │   └── tutorial/
+│   ├── ultralytics_agpl_strategy.md
 │   └── private_github_publish_checklist.md
 ├── SECURITY.md
+├── LICENSE
+├── NOTICE
+├── THIRD_PARTY_NOTICES.md
 ├── analysis.py
 ├── app.py
 ├── requirements.txt
@@ -289,6 +293,16 @@ This directory is intentionally ignored by git because it contains generated out
 - Do not commit local data, model weights, or generated outputs.
 - See SECURITY.md for reporting guidance.
 - See docs/private_github_publish_checklist.md before publishing a new remote repository.
+
+## Licensing and Third-Party Components
+
+- This repository's source code is licensed under GNU Affero General Public License v3.0 only (AGPL-3.0-only). See LICENSE.
+- Repository-level attribution and distribution notes are collected in NOTICE.
+- Direct dependency and redistribution notes are collected in THIRD_PARTY_NOTICES.md.
+- The current dependency set includes ultralytics, which upstream publishes under AGPL-3.0 terms or a separate commercial license. This repository is licensed under AGPL-3.0-only to align the public app with the open-source Ultralytics path.
+- If you run a modified version as a public network service, make the corresponding source code for that running version available to users as required by AGPL-3.0.
+- The app uses opencv-python-headless because it does not rely on OpenCV GUI APIs. If you switch back to opencv-python, re-check additional GUI-related wheel licenses such as Qt on Linux wheels.
+- Pretrained weights are intentionally not included in this repository. Any SAM, SAM 2, MobileSAM, FastSAM, or YOLO checkpoints that you download separately remain governed by their own upstream license and usage terms.
 
 ## Author
 

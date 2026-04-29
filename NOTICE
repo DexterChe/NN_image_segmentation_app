@@ -1,0 +1,21 @@
+NN_image_segmentation_app
+Copyright 2026 Dmitry Chezganov
+
+This repository's source code is licensed under the GNU Affero General Public
+License v3.0 only (AGPL-3.0-only). See the LICENSE file for the full license
+text.
+
+This repository depends on third-party open-source software that remains
+licensed under its own terms. A best-effort summary of direct runtime
+dependencies and related distribution notes is provided in
+THIRD_PARTY_NOTICES.md.
+
+The application imports Ultralytics software for model loading and inference.
+Ultralytics is offered under AGPL-3.0 terms or a separate commercial license
+from Ultralytics. This repository is licensed under AGPL-3.0-only to align the
+public application with the open-source Ultralytics licensing path.
+
+Pretrained model weights are not distributed with this repository. Any model
+checkpoints obtained separately by the user, whether downloaded manually or by
+third-party tooling, remain subject to the license terms and usage conditions
+published by their respective authors.
