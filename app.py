@@ -266,6 +266,70 @@ def sync_pending_widget_value(widget_key: str, pending_key: str) -> None:
         st.session_state[pending_key] = None
 
 
+def preprocess_images(images, use_clahe: bool = False, clahe_clip: float = 2.0,
+                      clahe_tile: int = 8, use_rebin: bool = False,
+                      rebin_factor: int = 2, progress_callback=None):
+    """Apply configured preprocessing and retain each intermediate stage."""
+    processed = []
+    rebinned_stage = []
+    clahe_stage = []
+
+    for index, image in enumerate(images):
+        result = image.copy()
+        rebinned_image = None
+        clahe_image = None
+
+        if use_rebin:
+            result = rebinning(result, rebin_factor)
+            rebinned_image = result.copy()
+        if use_clahe:
+            result = apply_clahe(result, clahe_clip, (clahe_tile, clahe_tile))
+            clahe_image = result.copy()
+
+        processed.append(result)
+        rebinned_stage.append(rebinned_image)
+        clahe_stage.append(clahe_image)
+
+        if progress_callback:
+            progress_callback(index + 1, len(images))
+
+    return processed, rebinned_stage, clahe_stage
+
+
+def process_segmentation_results(results, images, px_size: float,
+                                 size_metric: str = "Equivalent_diameter_nm",
+                                 min_size_value: float = 0.0,
+                                 max_size_value: float = 0.0,
+                                 progress_callback=None):
+    """Extract, measure, filter, and group results for each image."""
+    all_particles = []
+    all_measurements = []
+
+    for index, (result, image) in enumerate(zip(results, images)):
+        particles = extract_particles(result, image)
+        if particles:
+            measurements = analyze_particles(particles, px_size)
+
+            if size_metric in measurements.columns and not measurements.empty:
+                if min_size_value > 0:
+                    measurements = measurements[measurements[size_metric] >= min_size_value]
+                if max_size_value > 0:
+                    measurements = measurements[measurements[size_metric] <= max_size_value]
+                allowed_ids = set(measurements["Particle_ID"].astype(int).tolist())
+                particles = [particle for particle in particles if particle.index in allowed_ids]
+                measurements = measurements.reset_index(drop=True)
+
+            all_measurements.append(measurements)
+        else:
+            all_measurements.append(pd.DataFrame())
+
+        all_particles.append(particles)
+        if progress_callback:
+            progress_callback(index + 1, len(images))
+
+    return all_particles, all_measurements
+
+
 def save_results_to_dir(save_dir: str, images, particles_list,
                         measurements_list, names, model_name: str,
                         original_images=None,
@@ -936,27 +1000,19 @@ def main():
             """)
 
             if st.button("🔧 Apply preprocessing", type="primary"):
-                processed = []
-                rebinned_stage = []
-                clahe_stage = []
                 progress = st.progress(0, text="Processing images...")
-
-                for i, img in enumerate(st.session_state.images):
-                    result = img.copy()
-                    rebinned_img = None
-                    clahe_img = None
-                    if cfg['use_rebin']:
-                        result = rebinning(result, cfg['rebin_factor'])
-                        rebinned_img = result.copy()
-                    if cfg['use_clahe']:
-                        result = apply_clahe(result, cfg['clahe_clip'],
-                                             (cfg['clahe_tile'], cfg['clahe_tile']))
-                        clahe_img = result.copy()
-                    processed.append(result)
-                    rebinned_stage.append(rebinned_img)
-                    clahe_stage.append(clahe_img)
-                    progress.progress((i + 1) / len(st.session_state.images),
-                                      text=f"Processing {i+1}/{len(st.session_state.images)}")
+                processed, rebinned_stage, clahe_stage = preprocess_images(
+                    st.session_state.images,
+                    use_clahe=cfg['use_clahe'],
+                    clahe_clip=cfg['clahe_clip'],
+                    clahe_tile=cfg['clahe_tile'],
+                    use_rebin=cfg['use_rebin'],
+                    rebin_factor=cfg['rebin_factor'],
+                    progress_callback=lambda current, total: progress.progress(
+                        current / total,
+                        text=f"Processing {current}/{total}"
+                    ),
+                )
 
                 progress.empty()
                 st.session_state.images_processed = processed
@@ -1069,40 +1125,19 @@ def main():
 
                     # Extract particles
                     status_text.text("Extracting particles...")
-                    all_particles = []
-                    all_measurements = []
-
                     analyze_progress = st.progress(0, text="Analyzing particles...")
-
-                    for i, (result, img) in enumerate(zip(results, images)):
-                        particles = extract_particles(result, img)
-
-                        # Measure particles
-                        if particles:
-                            df = analyze_particles(particles, cfg['px_size'])
-
-                            # Min/max size filters by chosen metric
-                            metric = cfg["size_metric"]
-                            if metric in df.columns and not df.empty:
-                                if cfg["min_size_value"] > 0:
-                                    df = df[df[metric] >= cfg["min_size_value"]]
-                                if cfg["max_size_value"] > 0:
-                                    df = df[df[metric] <= cfg["max_size_value"]]
-                                allowed_ids = set(df["Particle_ID"].astype(int).tolist())
-                                particles = [p for p in particles if p.index in allowed_ids]
-                                df = df.reset_index(drop=True)
-
-                            all_measurements.append(df)
-                        else:
-                            df = pd.DataFrame()
-                            all_measurements.append(df)
-
-                        all_particles.append(particles)
-
-                        analyze_progress.progress(
-                            (i + 1) / len(images),
-                            text=f"Analyzing: {i+1}/{len(images)}"
-                        )
+                    all_particles, all_measurements = process_segmentation_results(
+                        results,
+                        images,
+                        px_size=cfg['px_size'],
+                        size_metric=cfg["size_metric"],
+                        min_size_value=cfg["min_size_value"],
+                        max_size_value=cfg["max_size_value"],
+                        progress_callback=lambda current, total: analyze_progress.progress(
+                            current / total,
+                            text=f"Analyzing: {current}/{total}"
+                        ),
+                    )
 
                     analyze_progress.empty()
                     status_text.empty()
