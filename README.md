@@ -75,8 +75,8 @@ Notes:
 ### 1. Clone the repository
 
 ```bash
-git clone <your-repo-url>
-cd streamlit_app
+git clone https://github.com/DexterChe/NN_image_segmentation_app.git
+cd NN_image_segmentation_app
 ```
 
 ### 2. Create and activate a Python environment
